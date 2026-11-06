@@ -7,9 +7,10 @@ from insightface.app import FaceAnalysis
 
 app = FastAPI()
 
-# I-load ang ArcFace model (CPU)
-face_app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
-face_app.prepare(ctx_id=0, det_size=(640, 640))
+# ✅ MAS MAGAAN: Gumamit ng 'buffalo_sc' (maliit na bersyon) at CPU lang
+# Tinanggal din natin ang malaking detection size
+face_app = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider'])
+face_app.prepare(ctx_id=-1, det_size=(320, 320)) # -1 means CPU, 320x320 is lighter
 
 class ImagePair(BaseModel):
     image1: str
@@ -20,8 +21,7 @@ def decode_base64_image(base64_string):
         base64_string = base64_string.split(",")[1]
     img_data = base64.b64decode(base64_string)
     nparr = np.frombuffer(img_data, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    return img
+    return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
 def get_embedding(img):
     faces = face_app.get(img)
@@ -47,10 +47,6 @@ async def compare_faces(pair: ImagePair):
         similarity = np.dot(emb1, emb2) / (np.linalg.norm(emb1) * np.linalg.norm(emb2))
         is_same = bool(similarity > 0.5)
 
-        return {
-            "success": True,
-            "is_same_person": is_same,
-            "similarity": float(similarity)
-        }
+        return {"success": True, "is_same_person": is_same, "similarity": float(similarity)}
     except Exception as e:
         return {"success": False, "message": str(e)}
